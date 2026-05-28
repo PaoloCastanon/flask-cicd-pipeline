@@ -1,0 +1,109 @@
+name: CI/CD Pipeline
+
+# Run on every push to any branch, and on PRs targeting main.
+# The "push" job has an extra condition so it only fires on main.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — test
+  # Install dev dependencies and run the test suite.
+  # All other jobs depend on this one; if tests fail, nothing else runs.
+  # ────────────────────────────────────────────────────────────────────────────
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # Cache pip downloads so repeated runs are faster.
+          cache: "pip"
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run pytest
+        run: pytest --tb=short -v
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — build
+  # Validate that the Dockerfile builds successfully on every push.
+  # This catches Dockerfile syntax errors and missing files early,
+  # before any image is published.
+  # ────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: test  # only runs if the test job passed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # Buildx is an extended Docker CLI plugin that enables multi-platform
+        # builds and better caching. It's the modern way to build images in CI.
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false  # just verify the build — no credentials needed here
+          tags: flask-cicd-pipeline:ci
+          # Cache layers between runs to speed up builds.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 3 — push
+  # Build the final image and push it to Docker Hub.
+  # Only runs when:
+  #   1. The build job passed
+  #   2. The event is a direct push (not a PR)
+  #   3. The branch is main
+  #
+  # This prevents feature branches and PRs from publishing images.
+  # ────────────────────────────────────────────────────────────────────────────
+  push:
+    name: Push to Docker Hub
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          # These values come from GitHub Secrets (repo → Settings → Secrets).
+          # Never hard-code credentials in workflow files.
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-pipeline:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-pipeline:${{ github.sha }}
+          # Reuse the cache warmed up by the build job.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
