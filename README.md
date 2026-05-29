@@ -209,8 +209,6 @@ Once added, GitHub Actions can read them as `${{ secrets.DOCKERHUB_USERNAME }}` 
 
 ## What I Learned
 
-> _Replace this section with your own reflection after building the project._
-
 - **Why containers matter**: Docker packages the app with all its dependencies, so "works on my machine" becomes "works everywhere." The multi-stage build taught me to separate *building* software from *running* it.
 
 - **CI vs CD**: Continuous Integration (running tests automatically) gives fast feedback. Continuous Delivery (pushing the image) closes the loop so every green build on `main` is deployable.
