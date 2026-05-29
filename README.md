@@ -1,6 +1,6 @@
 # Flask CI/CD Pipeline
 
-![CI/CD Pipeline](https://github.com/YOUR_GITHUB_USERNAME/flask-cicd-pipeline/actions/workflows/ci.yml/badge.svg)
+![CI/CD Pipeline](https://github.com/PaoloCastanon/flask-cicd-pipeline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Docker](https://img.shields.io/badge/docker-multi--stage-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -89,7 +89,7 @@ flask-cicd-pipeline/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_GITHUB_USERNAME/flask-cicd-pipeline.git
+git clone https://github.com/PaoloCastanon/flask-cicd-pipeline.git
 cd flask-cicd-pipeline
 
 # 2. Create a virtual environment (keeps dependencies isolated)
